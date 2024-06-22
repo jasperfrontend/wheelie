@@ -89,7 +89,7 @@ initializeBot().catch(console.error);
 // Called every time a message comes in
 function onMessageHandler(channel, context, msg, self) {
   if (self) { return; } // Ignore messages from the bot
-  console.log(context); // this is a fuckton of data lol
+  // console.log(context); // this is a fuckton of data lol
   // Get the username of the message sender
   const username = context.username;
 
@@ -111,6 +111,8 @@ function onMessageHandler(channel, context, msg, self) {
     handleSR(channel, commandName, context);
   } else if (commandName === '1' || commandName === '2') {
     handleVote(channel, commandName, context, 'vote');
+  } else if (commandName === '69') {
+    handle69(channel, commandName, context);
   } else if (commandName.startsWith('!new')) {
     handleNew(channel, commandName, context);
   } else if (commandName === '!leave') {
@@ -176,6 +178,9 @@ async function handleVote(channel, command, context) {
 }
 async function handleNew(channel, command, context) {
   client.say(channel, `${command} is called by ${context.username}`); 
+}
+async function handle69(channel, command, context) {
+  client.say(channel, `nice.`); 
 }
 async function handleLeave(channel, command, context) {
   client.say(channel, `${command} is called by ${context.username}`); 
