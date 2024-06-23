@@ -1,8 +1,8 @@
 require('dotenv').config();
 const tmi = require('tmi.js');
-const { createClient } = require('@supabase/supabase-js');
+const supabase = require('./lib/supabaseClient');
 const express = require('express');
-const youtubeCleaner = require('./lib/theUnpunishedYTCleaner');
+const youtubeCleaner = require('./utils/theUnpunishedYTCleaner');
 const moment = require('moment');
 require('moment-duration-format');
 
@@ -26,11 +26,6 @@ const authorizedUsers = ['JasperDiscovers'];
 
 // Create a client with our options
 const client = new tmi.Client(opts);
-
-// Create a single Supabase client for interacting with your database
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Initialize and start the bot
 async function initializeBot() {
@@ -323,23 +318,16 @@ async function handleR(channel, command, context, msg) {
     // then get both player1_uid and player2_uid 
     const player1 = theLastRound.player1_uid;
     
-    console.log(`song: ${song.yt_id}. RoundId: ${theLastRound.id}`);
-
-    // compare with the player uid 
-    // if player1 shove yt_id in player1_song
-    // if player2 shove yt_id in player2_song
+    // assign song to the correct player 
     player1 === correctUser.uid ? addSongToPlayer1(song.yt_id, theLastRound.id) : addSongToPlayer2(song.yt_id, theLastRound.id);
 
     client.say(channel, `@${context['display-name']}, you requested ${youTubeVideo.title}. Good luck!`);
 
     // then $patch store with latest updates in Vue app
-
     // then startRound()
 
   } else {
-
     client.say(channel, `@${context['display-name']}, you can only ${command} songs with a YouTube link, nothing else.`);
-
   }
 }
 
@@ -350,9 +338,11 @@ async function handleVote(channel, command, context) {
 async function handleNew(channel, command, context) {
   client.say(channel, `${command} is called by ${context['display-name']}`); 
 }
+
 async function handle69(channel) {
   client.say(channel, 'Kappa');
 }
+
 async function handleLeave(channel, command, context) {
   client.say(channel, `${command} is called by ${context['display-name']}`); 
 }
