@@ -138,7 +138,13 @@ function onMessageHandler(channel, context, msg, self) {
 
 // Called every time the bot connects to Twitch chat
 function onConnectedHandler(addr, port) {
-  console.log(`* * * Connected to [${addr}:${port}] * * *`);
+  const cyan = '\x1b[36m';  // ANSI escape code for cyan
+  const reset = '\x1b[0m';  // ANSI escape code to reset color
+  
+  const message = `* * * Connected to [${addr}:${port}] * * *`;
+  const coloredMessage = message.replace(/\*/g, `${cyan}*${reset}`);
+
+  console.log(coloredMessage);
 }
 
 // Called every time the bot disconnects from Twitch chat
@@ -177,6 +183,51 @@ function iso8601DurationToSeconds(duration) {
   return parsedDuration.asSeconds();
 }
 
+// YouTube Data API
+async function getYouTubeVideo(videoId) {
+  const vidId = videoId || null;
+  const response = vidId ? await fetch(`${process.env.YOUTUBE_API_URL}?part=snippet%2CcontentDetails&id=${vidId}&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`) : null;
+  const yt = await response.json();
+  const deep = yt.items[0]; // KEKW
+
+  const ytObject = ({
+    id: deep.id,
+    title: cleanTitle(deep.snippet.title),
+    thumb: deep.snippet.thumbnails.standard.url,
+    duration: iso8601DurationToSeconds(deep.contentDetails.duration),
+  });
+
+  return ytObject;
+}
+
+// Adding songs to the right player. pardon my French here.
+async function addSongToPlayer1(yt_id, roundId) {
+
+  const { data:addSongToRound, error:addSongToRoundError } = await supabase
+    .from('rounds')
+    .update({ player1_song: yt_id })
+    .eq('id', roundId);
+  
+  if(addSongToRoundError) {
+    console.log(`Error saving player 1 song to db: ${JSON.stringify(addSongToRoundError)}`);
+  }
+  return addSongToRound;
+}
+
+async function addSongToPlayer2(yt_id, roundId) {
+  const { data:addSongToRound, error:addSongToRoundError } = await supabase
+    .from('rounds')
+    .update({ player2_song: yt_id })
+    .eq('id', roundId)
+    .select()
+    .single();
+  
+  if(addSongToRoundError) {
+    console.log(`Error saving player 2 song to db: ${JSON.stringify(addSongToRoundError)}`);
+  }
+  return addSongToRound;
+}
+
 async function handleJoin(channel, command, context) {
   // check if user is already in db
   // if so, continue
@@ -198,52 +249,104 @@ async function handleJoin(channel, command, context) {
     .from('players')
     .update({ is_player: true })
     .eq('name', context['display-name'])
-    .select();
+    .select()
+    .single();
 
   if(setUserAsPlayerError) {
     console.log(`Error setting ${context['display-name']} as player.`);
-  } else if(setUserAsPlayer[0].is_player === true) {
-    client.say(channel, `@${context['display-name']}, you have already joined. Type !leave if you want to leave the queue. You will get called out in chat and by Jasper when it's your time to play.`)
+  } else if(setUserAsPlayer.is_player === true) {
+    client.say(channel, `@${context['display-name']}, you have already joined the queue of Spin The Wheel. Type !leave if you want to leave the queue. I will let you know when it's your time to play.`)
   } else {
     client.say(channel, `@${context['display-name']}, you have joined the queue of Spin The Wheel. Type !leave to leave the queue.`);
   }
 }
+
+// !r <youtubelink>
 async function handleR(channel, command, context, msg) {
   
   const beforeFilter = msg.toString().split(" ")[1];
   const result = youtubeCleaner.execute(beforeFilter);
   if(result.requestHasFuckedUpLink || result === null) {
-    client.say(channel, `@${context['display-name']}, you can only request songs with a YouTube link, nothing else.`);
+
+    client.say(channel, `@${context['display-name']}, you can only ${command} songs with a YouTube link, nothing else.`);
+
   } else if(result.filteredYouTubeLink) {
 
-    async function getYouTubeVideo(videoId) {
-      const vidId = videoId || null;
-      const response = vidId ? await fetch(`${process.env.YOUTUBE_API_URL}?part=snippet%2CcontentDetails&id=${vidId}&maxResults=1&key=${process.env.YOUTUBE_API_KEY}`) : null;
-      const yt = await response.json();
-      /*
-        items[0].id // 3hRPWmWftlY
-        items[0].snippet.title // Miggs de Bruijn - Hopen Dat 't Lukt Ft. Zack Ink (Prod. ATLouis)
-        items[0].snippet.thumbnails.standard.url // https://i.ytimg.com/vi/3hRPWmWftlY/sddefault.jpg
-        items[0].snippet.thumbnails.high.url // https://i.ytimg.com/vi/3hRPWmWftlY/hqdefault.jpg
-        items[0].snippet.thumbnails.maxres.url // https://i.ytimg.com/vi/3hRPWmWftlY/maxresdefault.jpg
-        items[0].contentDetails.duration // PT3M25S
-      */
-      const title = cleanTitle(yt.items[0].snippet.title); // this outputs the video title
-      const seconds = iso8601DurationToSeconds(yt.items[0].contentDetails.duration);
-      client.say(channel, title);
-      console.log(seconds); // 185, for example
-    }
+    const youTubeVideo = await getYouTubeVideo(result.filteredYouTubeLink);
+    // console.log(youTubeVideo);
 
-    await getYouTubeVideo(result.filteredYouTubeLink);
+    // youTubeVideo now contains a bunch of data
+    // insert into public.songs: 
+    const { data:songData, error:songDataError } = await supabase
+      .from('songs')
+      .upsert({ yt_id: youTubeVideo.id, title: youTubeVideo.title, thumbnail_url: youTubeVideo.thumb })
+      .select()
+      .single();
+    
+    if(songDataError) {
+      console.log(`Error inserting song into db: ${JSON.stringify(songDataError)}`);
+    }
+    if(songData === null) {
+      console.log(`No return data received after inserting a song: ${songData}`);
+    }
+    let song = songData;
+
+    // then get correct player uid from public.players eq.name
+    const { data:getUserData, error:getUserDataError } = await supabase
+      .from('players')
+      .select(`name, uid`)
+      .ilike('name', context['display-name'])
+      .single();
+    
+    if(getUserDataError) {
+      console.log(`Error getting user from db: ${JSON.stringify(getUserDataError)}`);
+    }
+    if(getUserData === null) {
+      console.log(`No return data received after searching for user: ${getUserData}`);
+    }
+    let correctUser = getUserData;
+    
+    // then get last round from view:last_round
+    const { data:lastRound, error:lastRoundError } = await supabase
+      .from('last_round')
+      .select('*')
+      .single();
+
+    if(lastRoundError) {
+      console.log(`Error getting last round from db: ${lastRoundError}`);
+    }
+    if(lastRound === null) {
+      console.log(`No return data received after trying to get last round: ${lastRound}`);
+    }
+    let theLastRound = lastRound;
+
+    // then get both player1_uid and player2_uid 
+    const player1 = theLastRound.player1_uid;
+    
+    console.log(`song: ${song.yt_id}. RoundId: ${theLastRound.id}`);
+
+    // compare with the player uid 
+    // if player1 shove yt_id in player1_song
+    // if player2 shove yt_id in player2_song
+    player1 === correctUser.uid ? addSongToPlayer1(song.yt_id, theLastRound.id) : addSongToPlayer2(song.yt_id, theLastRound.id);
+
+    client.say(channel, `@${context['display-name']}, you requested ${youTubeVideo.title}. Good luck!`);
+
+    // then $patch store with latest updates in Vue app
+
+    // then startRound()
 
   } else {
-    client.say(channel, `@${context['display-name']}, you can only request songs with a YouTube link, nothing else.`);
-  }
 
+    client.say(channel, `@${context['display-name']}, you can only ${command} songs with a YouTube link, nothing else.`);
+
+  }
 }
+
 async function handleVote(channel, command, context) {
   client.say(channel, `${command} is called by ${context['display-name']}`); 
 }
+
 async function handleNew(channel, command, context) {
   client.say(channel, `${command} is called by ${context['display-name']}`); 
 }
