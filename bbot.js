@@ -1,3 +1,4 @@
+// bbot, because it's better than bot.js was
 const { opts, supabase } = require('./config');
 const tmi = require('tmi.js');
 const client = new tmi.Client(opts);
@@ -56,7 +57,7 @@ async function initializeBot() {
 }
 
 async function fetchPlayerChannels() {
-  const { data, error } = await supabase.from('players').select('name').eq('uid', 'ea04bc6c-39dd-44a5-a9b3-11c42ae2ddf1');
+  const { data, error } = await supabase.from('players').select('name').eq('uid', process.env.UUID_JASPER);
   if (error) {
       console.error('Error fetching players.');
       return [];
