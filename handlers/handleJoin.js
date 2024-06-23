@@ -1,4 +1,4 @@
-
+const { supabase } = require('../config');
 async function handleJoin(client, channel, command, context) {
   // check if user is already in db
   // if so, continue
@@ -26,9 +26,9 @@ async function handleJoin(client, channel, command, context) {
   if(setUserAsPlayerError) {
     console.log(`Error setting ${context['display-name']} as player.`);
   } else if(setUserAsPlayer.is_player === true) {
-    client.say(channel, `@${context['display-name']}, you have already joined the queue of Spin The Wheel. Type !leave if you want to leave the queue. I will let you know when it's your time to play.`)
+    client.say(channel, `@${context['display-name']}, you have joined the queue of Spin The Wheel. Type !leave if you want to leave the queue. I will let you know when it's your time to play.`)
   } else {
-    client.say(channel, `@${context['display-name']}, you have joined the queue of Spin The Wheel. Type !leave to leave the queue.`);
+    client.say(channel, `@${context['display-name']}, god knows what went wrong. Try !join again :)`);
   }
 }
 

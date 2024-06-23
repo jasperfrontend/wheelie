@@ -1,5 +1,4 @@
 require('dotenv').config();
-const tmi = require('tmi.js');
 const { createClient } = require('@supabase/supabase-js');
 
 const opts = {
