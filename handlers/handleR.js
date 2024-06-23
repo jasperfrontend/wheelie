@@ -14,7 +14,7 @@ async function handleR(client, channel, command, context, msg) {
 
   } else if(result.filteredYouTubeLink) {
 
-    const youTubeVideo = await getYouTubeVideo(result.filteredYouTubeLink);
+    const youTubeVideo = await getYouTubeVideo(client, channel, context, result.filteredYouTubeLink);
 
     // insert into public.songs: 
     const { data:songData, error:songDataError } = await supabase

@@ -17,6 +17,7 @@ const { handleStats } = require('./handlers/handleStats');
 const { handleVote } = require('./handlers/handleVote');
 const { handleVotewhen } = require('./handlers/handleVotewhen');
 const { handleVs } = require('./handlers/handleVs');
+const { handleCutStart, handleCutEnd } = require('./handlers/handleYouTubeNinja');
 
 const {
   onConnectedHandler,
@@ -59,6 +60,7 @@ client.on('message', (channel, context, msg, self) => {
   if (self) return;
   const commandName = msg.trim().toLowerCase();
   const username = context['display-name'];
+  const args = msg.split(' ').slice(1);
 
   if (!authorizedUsers.includes(username)) return;
 
@@ -90,7 +92,11 @@ client.on('message', (channel, context, msg, self) => {
     handleCat(client, channel, commandName, context);
   } else if (commandName === '!beep') {
     handleBeep(client, channel, commandName, context);
-  };
+  } else if (commandName.startsWith('!cutstart')) {
+    handleCutStart(client, channel, context, args);
+  } else if (commandName.startsWith('!cutend')) {
+    handleCutEnd(client, channel, context, args);
+  }
 });
 
 client.on('connected', onConnectedHandler);
