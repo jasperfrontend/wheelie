@@ -51,18 +51,8 @@ async function initializeBot() {
     supabase.auth.setSession(session.access_token);
   }
 
-  const channels = await fetchPlayerChannels();
-  client.opts.channels = channels;
+  client.opts.channels = [process.env.TWITCH_CHANNEL];
   client.connect().catch(console.error);
-}
-
-async function fetchPlayerChannels() {
-  const { data, error } = await supabase.from('players').select('name').eq('uid', process.env.UUID_JASPER);
-  if (error) {
-      console.error('Error fetching players.');
-      return [];
-  }
-  return data.map(user => user.name);
 }
 
 client.on('message', (channel, context, msg, self) => {

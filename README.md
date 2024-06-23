@@ -4,7 +4,7 @@ Twitch chat and JasperDiscovers' Spin The Wheel game show hosted on <a href="htt
 every Friday night from 7pm CET!
 
 ## Can I use this?
-At the moment, I mean sure. go ahead, with zero guarantees.
+This bot is not in any way shape or form ready for production yet.
 
-## Can I buy this?
-Suuuuuuuuuuuure. <a href="https://ko-fi.com/JasperDiscovers">ko-fi.com/JasperDiscovers</a>
+## Can I support this?
+Suuuuuuuuuuuure! Thanks ♥ <a href="https://ko-fi.com/JasperDiscovers">ko-fi.com/JasperDiscovers</a>
